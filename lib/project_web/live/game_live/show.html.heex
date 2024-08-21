@@ -1,28 +1,37 @@
-<.header>
-  Game <%= @game.id %>
-  <:subtitle>This is a game record from your database.</:subtitle>
-  <:actions>
-    <.link patch={~p"/games/#{@game}/show/edit"} phx-click={JS.push_focus()}>
-      <.button>Edit game</.button>
-    </.link>
-  </:actions>
-</.header>
+<h1>Game id <%= @game.id %></h1>
+<button phx-click="reset_game">Reset</button>
+<div class="grid grid-cols-3">
+  <%= for card_index <- @active_cards do %>
+    <% card = generate_card_data(card_index) %>
+    <button class="card" phx-click="select_card" phx-value-card={card.id}>
+      <%= card.count %> - <%= card.shape %> - <%= card.fill %> - <%= card.color %>
+    </button>
+  <% end %>
+</div>
 
-<.list>
-  <:item title="Deck"><%= @game.deck %></:item>
-  <:item title="Active cards"><%= @game.active_cards %></:item>
-  <:item title="Players"><%= @game.players %></:item>
-</.list>
+<div>
+  <h2>Selected</h2>
+  <%= for card <- @selected_cards do %>
+    <div><%= card %></div>
+  <% end %>
+</div>
 
-<.back navigate={~p"/games"}>Back to games</.back>
+<%= if @players do %>
+  <div class="players">
+    <h2>Players and Scores</h2>
+    <ul>
+      <%= for {player_id, player_cards} <- @players do %>
+        <li>
+          <%= player_id %> - Cards: <%= Enum.join(player_cards, ", ") %>
+        </li>
+      <% end %>
+    </ul>
+  </div>
+<% end %>
 
-<.modal :if={@live_action == :edit} id="game-modal" show on_cancel={JS.patch(~p"/games/#{@game}")}>
-  <.live_component
-    module={ProjectWeb.GameLive.FormComponent}
-    id={@game.id}
-    title={@page_title}
-    action={@live_action}
-    game={@game}
-    patch={~p"/games/#{@game}"}
-  />
-</.modal>
+<div>
+  <h2>Deck</h2>
+  <%= for card <- @deck do %>
+    <div><%= card %></div>
+  <% end %>
+</div>

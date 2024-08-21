@@ -5,6 +5,7 @@ defmodule Project.Repo.Migrations.CreateGames do
     create table(:games) do
       add :deck, {:array, :integer}
       add :active_cards, {:array, :integer}
+      add :selected_cards, {:array, :integer}
       add :players, :map
 
       timestamps()

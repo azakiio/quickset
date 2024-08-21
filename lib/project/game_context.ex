@@ -10,6 +10,7 @@ defmodule Project.GameContext do
   # Add other context functions here
 
   alias Project.GameContext.Game
+  alias Project.Card
 
   @doc """
   Returns the list of games.
@@ -62,6 +63,7 @@ defmodule Project.GameContext do
         %{
           deck: remaining_deck,
           active_cards: initial_active_cards,
+          selected_cards: [],
           players: %{}
         },
         attrs
@@ -70,6 +72,46 @@ defmodule Project.GameContext do
     %Game{}
     |> Game.changeset(attrs_with_defaults)
     |> Repo.insert()
+  end
+
+  def reset_game(%Game{} = game) do
+    deck = Enum.to_list(0..80)
+    initial_active_cards = Enum.take(deck, 12)
+    remaining_deck = Enum.drop(deck, 12)
+
+    attrs_with_reset = %{
+      deck: remaining_deck,
+      active_cards: initial_active_cards,
+      selected_cards: [],
+      players: %{}
+    }
+
+    game
+    |> change_game(attrs_with_reset)
+    |> Repo.update()
+  end
+
+  def is_set?([card1_id, card2_id, card3_id]) do
+    categories = [:count, :shape, :fill, :color]
+
+    set_arr = [
+      Card.generate_card_data(card1_id),
+      Card.generate_card_data(card2_id),
+      Card.generate_card_data(card3_id)
+    ]
+
+    res =
+      Enum.map(categories, fn category ->
+        set_arr
+        |> Enum.map(&Map.get(&1, category))
+        |> Enum.uniq()
+        |> length()
+      end)
+
+    # For debugging purposes
+    IO.inspect(res)
+
+    Enum.all?(res, &(&1 in [1, 3]))
   end
 
   @doc """
@@ -90,10 +132,52 @@ defmodule Project.GameContext do
     |> Repo.update()
   end
 
-  def update_active_cards(game_id, active_cards, deck) do
-    get_game!(game_id)
-    |> change_game(%{active_cards: active_cards, deck: deck})
-    |> Repo.update()
+  def update_game_with_set(game, selected_cards, player_id) do
+    if is_set?(selected_cards) do
+      # Award the set to the player
+      updated_players =
+        Map.update(game.players, player_id, selected_cards, &(&1 ++ selected_cards))
+
+      # Replace the active cards
+      {new_active_cards, new_deck} =
+        replace_selected_cards(game.active_cards, game.deck, selected_cards)
+
+      update_game(game, %{
+        players: updated_players,
+        active_cards: new_active_cards,
+        deck: new_deck,
+        selected_cards: []
+      })
+    else
+      # Ensure selected_cards is reset even if the set is not valid
+      update_game(game, %{selected_cards: []})
+    end
+  end
+
+  defp replace_selected_cards(active_cards, deck, selected_cards) do
+    # Find the indices of the selected cards in the active cards
+    selected_indices =
+      Enum.map(selected_cards, fn card ->
+        Enum.find_index(active_cards, fn x -> x == card end)
+      end)
+
+    # Take the new cards from the deck (up to the number of selected cards)
+    {new_cards, remaining_deck} = Enum.split(deck, length(selected_cards))
+
+    # Create the new active cards list by replacing selected cards with new cards
+    new_active_cards =
+      Enum.with_index(active_cards)
+      |> Enum.map(fn {card, index} ->
+        if index in selected_indices do
+          # Replace the card with the corresponding new card
+          new_card_index = Enum.find_index(selected_indices, fn idx -> idx == index end)
+          Enum.at(new_cards, new_card_index)
+        else
+          card
+        end
+      end)
+
+    {new_active_cards, remaining_deck}
   end
 
   @doc """

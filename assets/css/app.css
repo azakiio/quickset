@@ -3,3 +3,16 @@
 @import "tailwindcss/utilities";
 
 /* This file is for your main application CSS */
+/* app.css */
+
+.card {
+  border: 1px solid black;
+  padding: 10px;
+  margin: 5px;
+}
+
+.selected-card {
+  border: 2px solid blue;
+  padding: 10px;
+  margin: 5px;
+}

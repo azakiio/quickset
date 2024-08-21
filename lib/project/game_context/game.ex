@@ -5,6 +5,7 @@ defmodule Project.GameContext.Game do
   schema "games" do
     field :deck, {:array, :integer}
     field :active_cards, {:array, :integer}
+    field :selected_cards, {:array, :integer}
     field :players, :map
 
     timestamps()
@@ -13,7 +14,7 @@ defmodule Project.GameContext.Game do
   @doc false
   def changeset(game, attrs) do
     game
-    |> cast(attrs, [:deck, :active_cards, :players])
+    |> cast(attrs, [:deck, :active_cards, :selected_cards, :players])
     |> validate_required([])
   end
 end
