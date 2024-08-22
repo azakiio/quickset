@@ -52,7 +52,7 @@ defmodule Project.GameContext do
 
   """
   def create_game(attrs \\ %{}) do
-    deck = Enum.to_list(0..80)
+    deck = Enum.shuffle(Enum.to_list(0..80))
     initial_active_cards = Enum.take(deck, 12)
     remaining_deck = Enum.drop(deck, 12)
 
@@ -73,7 +73,7 @@ defmodule Project.GameContext do
   end
 
   def reset_game(%Game{} = game) do
-    deck = Enum.to_list(0..80)
+    deck = Enum.shuffle(Enum.to_list(0..80))
     initial_active_cards = Enum.take(deck, 12)
     remaining_deck = Enum.drop(deck, 12)
 

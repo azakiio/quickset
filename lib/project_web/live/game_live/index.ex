@@ -20,21 +20,26 @@ defmodule ProjectWeb.GameLive.Index do
           <tr>
             <th>ID</th>
             <th>Deck</th>
-            <th>Active Cards</th>
-            <th>Selected Cards</th>
-            <th>Players</th>
+            <th></th>
             <th></th>
           </tr>
         </thead>
         <tbody id="games" phx-update="stream">
           <tr :for={{id, game} <- @streams.games} id={id}>
-            <td><%= inspect(game.id) %></td>
-            <td><%= inspect(game.deck) %></td>
-            <td><%= inspect(game.active_cards) %></td>
-            <td><%= inspect(game.selected_cards) %></td>
-            <td><%= inspect(game.players) %></td>
+            <td class="p-2"><%= inspect(game.id) %></td>
+            <td class="p-2"><%= length(game.deck) %></td>
             <td>
-              <a href="#" phx-click="delete" phx-value-id={game.id}>Delete</a>
+              <.link
+                class="btn"
+                navigate={"/games/#{game.id}"}
+                phx-click="delete"
+                phx-value-id={game.id}
+              >
+                Open
+              </.link>
+            </td>
+            <td>
+              <a href="#" class="btn" phx-click="delete" phx-value-id={game.id}>Delete</a>
             </td>
           </tr>
         </tbody>
