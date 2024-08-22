@@ -10,6 +10,40 @@ defmodule ProjectWeb.GameLive.Index do
   end
 
   @impl true
+  def render(assigns) do
+    ~H"""
+    <div class="container">
+      <h1><%= @page_title %></h1>
+      <button phx-click="create_game" type="submit">Create New Game</button>
+      <table class="table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Deck</th>
+            <th>Active Cards</th>
+            <th>Selected Cards</th>
+            <th>Players</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="games" phx-update="stream">
+          <tr :for={{id, game} <- @streams.games} id={id}>
+            <td><%= inspect(game.id) %></td>
+            <td><%= inspect(game.deck) %></td>
+            <td><%= inspect(game.active_cards) %></td>
+            <td><%= inspect(game.selected_cards) %></td>
+            <td><%= inspect(game.players) %></td>
+            <td>
+              <a href="#" phx-click="delete" phx-value-id={game.id}>Delete</a>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+    """
+  end
+
+  @impl true
   def handle_params(params, _url, socket) do
     {:noreply, apply_action(socket, socket.assigns.live_action, params)}
   end
@@ -43,5 +77,18 @@ defmodule ProjectWeb.GameLive.Index do
     {:ok, _} = GameContext.delete_game(game)
 
     {:noreply, stream_delete(socket, :games, game)}
+  end
+
+  @impl true
+  def handle_event("create_game", _params, socket) do
+    case GameContext.create_game() do
+      {:ok, game} ->
+        # Redirect to the new game's page
+        {:noreply, redirect(socket, to: "/games/#{game.id}")}
+
+      {:error, _changeset} ->
+        # Handle the error, perhaps re-render the form with an error message
+        {:noreply, assign(socket, :error, "Failed to create game")}
+    end
   end
 end

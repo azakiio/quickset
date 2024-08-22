@@ -4,15 +4,39 @@
 
 /* This file is for your main application CSS */
 /* app.css */
-
-.card {
-  border: 1px solid black;
-  padding: 10px;
-  margin: 5px;
+:root {
+  --primary: #fd4e00;
+  --primary-on: #fff;
 }
 
-.selected-card {
-  border: 2px solid blue;
-  padding: 10px;
-  margin: 5px;
+.card {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  justify-content: center;
+  align-items: center;
+  padding: 12px;
+  border-radius: 1rem;
+  transition: scale 0.3s;
+  @apply border-2;
+
+  &[aria-selected] {
+    scale: 1.05;
+    @apply ring;
+  }
+}
+
+.btn {
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  @apply shadow-md;
+  background-color: var(--primary);
+  color: var(--primary-on);
+
+  &:hover {
+    background-color: oklch(from var(--primary) calc(l - 0.1) c calc(h - 10));
+  }
 }

@@ -7,8 +7,6 @@ defmodule Project.GameContext do
   alias Project.Repo
   alias Project.Game
 
-  # Add other context functions here
-
   alias Project.GameContext.Game
   alias Project.Card
 
@@ -107,9 +105,6 @@ defmodule Project.GameContext do
         |> Enum.uniq()
         |> length()
       end)
-
-    # For debugging purposes
-    IO.inspect(res)
 
     Enum.all?(res, &(&1 in [1, 3]))
   end

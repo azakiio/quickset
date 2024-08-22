@@ -1,7 +1,7 @@
 defmodule ProjectWeb.GameLive.Show do
   use ProjectWeb, :live_view
-  import Phoenix.HTML
   alias Project.GameContext
+  alias Project.Card
 
   def mount(%{"id" => id}, _session, socket) do
     game = GameContext.get_game!(id)
@@ -18,14 +18,36 @@ defmodule ProjectWeb.GameLive.Show do
 
   def render(assigns) do
     ~H"""
-    <div class="grid grid-cols-3 gap-4 p-4">
-      <%= for card_index <- @active_cards do %>
-        <% card = generate_card_data(card_index) %>
-        <button class="card" phx-click="select_card" phx-value-card={card.id}>
+    <div class="flex justify-between">
+      <button class="btn">Copy Url</button>
+      <button phx-click="reset_game">Reset Game</button>
+    </div>
+    <div class="grid grid-cols-3 gap-4 py-4 grid-rows-4">
+      <%= for card <- @active_cards do %>
+        <button
+          class="card"
+          disabled={!card}
+          aria-selected={card in @selected_cards}
+          phx-click="select_card"
+          phx-value-card={card}
+        >
           <%= render_card(card) %>
         </button>
       <% end %>
     </div>
+
+    <%= if @players do %>
+      <div class="players">
+        <h2 class="text-xl font-bold">Players and Scores</h2>
+        <ul>
+          <%= for {player_id, player_cards} <- @players do %>
+            <li>
+              <%= player_id %>: <%= div(length(player_cards), 3) %>
+            </li>
+          <% end %>
+        </ul>
+      </div>
+    <% end %>
     """
   end
 
@@ -47,7 +69,6 @@ defmodule ProjectWeb.GameLive.Show do
 
   def handle_event("select_card", %{"card" => card}, socket) do
     card = String.to_integer(card)
-    game = socket.assigns.game
     selected_cards = socket.assigns.selected_cards
 
     selected_cards =
@@ -57,82 +78,73 @@ defmodule ProjectWeb.GameLive.Show do
         selected_cards ++ [card]
       end
 
-    result =
-      if length(selected_cards) == 3 do
-        GameContext.update_game_with_set(game, selected_cards, ~c"player_1")
-      else
-        GameContext.update_game(game, %{selected_cards: selected_cards})
-      end
+    if length(selected_cards) == 3 do
+      Process.send_after(self(), {:finalize_selection, selected_cards}, 1000)
+      {:noreply, assign(socket, selected_cards: selected_cards)}
+    else
+      {:noreply, assign(socket, selected_cards: selected_cards)}
+    end
+  end
+
+  def handle_info({:finalize_selection, selected_cards}, socket) do
+    game = socket.assigns.game
+    result = GameContext.update_game_with_set(game, selected_cards, ~s"noob")
 
     case result do
       {:ok, updated_game} ->
         {:noreply,
          assign(socket,
            game: updated_game,
-           selected_cards: updated_game.selected_cards,
+           selected_cards: [],
            active_cards: updated_game.active_cards,
            deck: updated_game.deck,
            players: updated_game.players
          )}
 
       {:error, _reason} ->
-        {:noreply, assign(socket, selected_cards: selected_cards)}
+        {:noreply, assign(socket, selected_cards: [])}
     end
   end
 
-  defp generate_card_data(card_index) do
-    counts = [1, 2, 3]
-    shapes = ["square", "circle", "diamond"]
-    fills = ["solid", "opacity_50", "no_fill"]
-    colors = ["green", "orange", "purple"]
+  defp render_card(card_index) do
+    if is_number(card_index) do
+      %{count: count, shape: shape, fill: fill, color: color} =
+        Card.generate_card_data(card_index)
 
-    attribute_string = Integer.to_string(card_index, 3) |> String.pad_leading(4, "0")
-    count_index = String.at(attribute_string, 0) |> String.to_integer()
-    shape_index = String.at(attribute_string, 1) |> String.to_integer()
-    fill_index = String.at(attribute_string, 2) |> String.to_integer()
-    color_index = String.at(attribute_string, 3) |> String.to_integer()
+      card_svg =
+        for _ <- 1..count do
+          case shape do
+            "square" ->
+              """
+              <svg width="50" height="50" class="card-svg">
+                <rect x="5" y="5" width="40" height="40" fill="#{fill_color(fill, color)}" stroke="#{color}" stroke-width="2" rx="4" ry="4" stroke-linejoin="round" />
+              </svg>
+              """
 
-    %{
-      id: card_index,
-      count: Enum.at(counts, count_index),
-      shape: Enum.at(shapes, shape_index),
-      fill: Enum.at(fills, fill_index),
-      color: Enum.at(colors, color_index)
-    }
-  end
+            "circle" ->
+              """
+              <svg width="50" height="50" class="card-svg">
+                <circle cx="25" cy="25" r="20" fill="#{fill_color(fill, color)}" stroke="#{color}" stroke-width="2"/>
+              </svg>
+              """
 
-  defp render_card(%{count: count, shape: shape, fill: fill, color: color}) do
-    card_svg =
-      for _ <- 1..count do
-        case shape do
-          "square" ->
-            """
-            <svg width="50" height="50" class="card-svg">
-              <rect width="30" height="30" fill="#{fill_color(fill, color)}" stroke="#{color}" stroke-width="2"/>
-            </svg>
-            """
-
-          "circle" ->
-            """
-            <svg width="50" height="50" class="card-svg">
-              <circle cx="25" cy="25" r="20" fill="#{fill_color(fill, color)}" stroke="#{color}" stroke-width="2"/>
-            </svg>
-            """
-
-          "diamond" ->
-            """
-            <svg width="50" height="50" class="card-svg">
-              <polygon points="25,0 50,25 25,50 0,25" fill="#{fill_color(fill, color)}" stroke="#{color}" stroke-width="2"/>
-            </svg>
-            """
+            "diamond" ->
+              """
+              <svg width="50" height="50" class="card-svg">
+                <polygon points="25,2 48,25 25,48 2,25" fill="#{fill_color(fill, color)}" stroke="#{color}" stroke-width="2" stroke-linejoin="round"/>
+              </svg>
+              """
+          end
         end
-      end
-      |> Enum.join("\n")
+        |> Enum.join("\n")
 
-    Phoenix.HTML.raw(card_svg)
+      Phoenix.HTML.raw(card_svg)
+    else
+      Phoenix.HTML.raw("")
+    end
   end
 
-  defp fill_color("solid", _color), do: "currentColor"
-  defp fill_color("opacity_50", color), do: "red"
-  defp fill_color("no_fill", _color), do: "none"
+  defp fill_color("solid", color), do: color
+  defp fill_color("striped", color), do: "hsl(from #{color} h s l / 0.4)"
+  defp fill_color("empty", _color), do: "transparent"
 end
