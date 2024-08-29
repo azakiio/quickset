@@ -7,8 +7,10 @@ defmodule ProjectWeb.GameLive.Show do
   @topic_prefix "game:"
 
   @impl true
-  def mount(%{"id" => id}, _session, socket) do
+  def mount(%{"id" => id} = params, _session, socket) do
     if connected?(socket), do: PubSub.subscribe(Project.PubSub, topic(id))
+
+    isReveal = !is_nil(Map.get(params, "reveal"))
 
     case GameContext.get_game!(id) do
       nil ->
@@ -23,7 +25,7 @@ defmodule ProjectWeb.GameLive.Show do
          |> assign(
            game: game,
            name: "Guest_#{:rand.uniform(99999)}",
-           valid_sets: []
+           valid_sets: isReveal && GameContext.find_valid_sets(game.active_cards)
          )}
     end
   end
@@ -33,7 +35,7 @@ defmodule ProjectWeb.GameLive.Show do
     ~H"""
     <div class="grid grid-flow-col justify-between items-center">
       <button class="btn" phx-click={JS.dispatch("phx:copy")}>Invite</button>
-      <div class="font-bold">
+      <div class="text-lg font-bold">
         <%= if @name do %>
           <%= @name %>
         <% end %>
@@ -80,10 +82,8 @@ defmodule ProjectWeb.GameLive.Show do
       </div>
     </div>
 
-    <button phx-click="find_sets" class="btn mt-36 mb-4">Reveal Sets</button>
-
     <%= if @valid_sets do %>
-      <div class="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-4">
+      <div class="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-4 mt-36">
         <div
           :for={card <- @valid_sets}
           class="grid gap-1 border-2 rounded-lg p-2 justify-items-center"
