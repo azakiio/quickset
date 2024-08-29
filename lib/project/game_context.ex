@@ -37,7 +37,7 @@ defmodule Project.GameContext do
       ** (Ecto.NoResultsError)
 
   """
-  def get_game!(id), do: Repo.get!(Game, id)
+  def get_game!(id), do: Repo.get(Game, id)
 
   @doc """
   Creates a game.
@@ -89,14 +89,10 @@ defmodule Project.GameContext do
     |> Repo.update()
   end
 
-  def is_set?([card1_id, card2_id, card3_id]) do
+  def is_set?(card_ids) do
     categories = [:count, :shape, :fill, :color]
 
-    set_arr = [
-      Card.generate_card_data(card1_id),
-      Card.generate_card_data(card2_id),
-      Card.generate_card_data(card3_id)
-    ]
+    set_arr = Enum.map(card_ids, &Card.generate_card_data/1)
 
     res =
       Enum.map(categories, fn category ->
@@ -105,6 +101,8 @@ defmodule Project.GameContext do
         |> Enum.uniq()
         |> length()
       end)
+
+    IO.inspect(res)
 
     Enum.all?(res, &(&1 in [1, 3]))
   end

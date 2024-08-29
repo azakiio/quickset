@@ -2,7 +2,6 @@ defmodule ProjectWeb.GameLive.Index do
   use ProjectWeb, :live_view
 
   alias Project.GameContext
-  alias Project.GameContext.Game
 
   @impl true
   def mount(_params, _session, socket) do
@@ -12,88 +11,59 @@ defmodule ProjectWeb.GameLive.Index do
   @impl true
   def render(assigns) do
     ~H"""
-    <div class="container">
-      <h1><%= @page_title %></h1>
-      <button phx-click="create_game" type="submit">Create New Game</button>
-      <table class="table">
-        <thead>
-          <tr>
-            <th>ID</th>
-            <th>Deck</th>
-            <th></th>
-            <th></th>
-          </tr>
-        </thead>
-        <tbody id="games" phx-update="stream">
-          <tr :for={{id, game} <- @streams.games} id={id}>
-            <td class="p-2"><%= inspect(game.id) %></td>
-            <td class="p-2"><%= length(game.deck) %></td>
-            <td>
-              <.link
-                class="btn"
-                navigate={"/games/#{game.id}"}
-                phx-click="delete"
-                phx-value-id={game.id}
-              >
-                Open
-              </.link>
-            </td>
-            <td>
-              <a href="#" class="btn" phx-click="delete" phx-value-id={game.id}>Delete</a>
-            </td>
-          </tr>
-        </tbody>
-      </table>
+    <div class="grid place-items-center">
+      <h1 class="text-6xl font-bold">quickset<span class="text-[var(--primary)]">.online</span></h1>
+      <div>Challenge your visualization and logical reasoning!</div>
+      <form phx-submit="create_game" class="my-24">
+        <input
+          type="text"
+          id="name"
+          name="name"
+          class="shadow appearance-none border rounded w-full py-2 px-3 text-gray-700 leading-tight focus:outline-none focus:shadow-outline"
+          required
+          placeholder="Enter your name"
+        />
+        <button type="submit" class="btn mt-4 flex mx-auto">Create Game</button>
+      </form>
+      <div class="grid grid-cols-[repeat(auto-fit,minmax(300px,1fr))] gap-8">
+        <div class="grid gap-4">
+          <h2>About</h2>
+          <p>
+            Quickset is a real-time, multiplayer card game based on the game 'Set' by Marsha Falco in 1974.
+          </p>
+          <p>
+            The game consists of 81 unique cards, each varying in four features: number of shapes (one, two, or three), shape (square, circle, diamond), shading (solid, striped, open), and color (orange, green, purple).
+          </p>
+          <p>
+            Players must identify a "set" of three cards that either all share the same features or all have different features across all categories.
+          </p>
+        </div>
+        <div class="grid gap-4">
+          <h2>How to play</h2>
+          <p>Start with 12 cards on the table</p>
+          <p>
+            Look for a "set" of three cards that meet the conditions: <b>all the same</b> <em>or</em>
+            <b>all different</b> in number, shape, shading, and color.
+          </p>
+          <p>
+            If you see a set, just click on the cards to select them. There are no turns in this game, the first player to make a set gets those cards.
+          </p>
+          <p>
+            Once a set is made, the cards are replaced with new ones from the deck. The game continues until the deck is exhausted.
+          </p>
+        </div>
+      </div>
     </div>
     """
   end
 
   @impl true
-  def handle_params(params, _url, socket) do
-    {:noreply, apply_action(socket, socket.assigns.live_action, params)}
-  end
+  def handle_event("create_game", %{"name" => name}, socket) do
+    # Create a new game and get its ID
+    {:ok, game} = GameContext.create_game()
 
-  defp apply_action(socket, :edit, %{"id" => id}) do
-    socket
-    |> assign(:page_title, "Edit Game")
-    |> assign(:game, GameContext.get_game!(id))
-  end
+    socket = socket |> push_event("store", %{key: "name", data: name})
 
-  defp apply_action(socket, :new, _params) do
-    socket
-    |> assign(:page_title, "New Game")
-    |> assign(:game, %Game{})
-  end
-
-  defp apply_action(socket, :index, _params) do
-    socket
-    |> assign(:page_title, "Listing Games")
-    |> assign(:game, nil)
-  end
-
-  @impl true
-  def handle_info({ProjectWeb.GameLive.FormComponent, {:saved, game}}, socket) do
-    {:noreply, stream_insert(socket, :games, game)}
-  end
-
-  @impl true
-  def handle_event("delete", %{"id" => id}, socket) do
-    game = GameContext.get_game!(id)
-    {:ok, _} = GameContext.delete_game(game)
-
-    {:noreply, stream_delete(socket, :games, game)}
-  end
-
-  @impl true
-  def handle_event("create_game", _params, socket) do
-    case GameContext.create_game() do
-      {:ok, game} ->
-        # Redirect to the new game's page
-        {:noreply, redirect(socket, to: "/games/#{game.id}")}
-
-      {:error, _changeset} ->
-        # Handle the error, perhaps re-render the form with an error message
-        {:noreply, assign(socket, :error, "Failed to create game")}
-    end
+    {:noreply, socket |> push_navigate(to: ~p"/#{game.id}")}
   end
 end

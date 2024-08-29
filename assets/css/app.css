@@ -7,6 +7,17 @@
 :root {
   --primary: #fd4e00;
   --primary-on: #fff;
+
+  --gray-0: #f8f9fa;
+  --gray-1: #f1f3f5;
+  --gray-2: #e9ecef;
+  --gray-3: #dee2e6;
+  --gray-4: #ced4da;
+  --gray-5: #adb5bd;
+  --gray-6: #868e96;
+  --gray-7: #495057;
+  --gray-8: #343a40;
+  --gray-9: #212529;
 }
 
 .card {
@@ -15,6 +26,7 @@
   gap: 0.5rem;
   justify-content: center;
   align-items: center;
+  place-content: center;
   padding: 12px;
   border-radius: 1rem;
   transition: scale 0.3s;
@@ -39,4 +51,40 @@
   &:hover {
     background-color: oklch(from var(--primary) calc(l - 0.1) c calc(h - 10));
   }
+}
+
+.btn-neutral {
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  @apply shadow-md;
+  background-color: var(--gray-7);
+  color: #fff;
+
+  &:hover {
+    background-color: oklch(from var(--gray-7) calc(l - 0.1) c calc(h - 10));
+  }
+}
+
+.btn-primary {
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.3s;
+  @apply shadow-md;
+  background-color: var(--primary);
+  color: var(--primary-on);
+
+  &:hover {
+    background-color: oklch(from var(--primary) calc(l - 0.1) c calc(h - 10));
+  }
+}
+
+h2 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  line-height: 1.1;
 }
