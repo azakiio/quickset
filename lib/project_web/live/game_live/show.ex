@@ -7,10 +7,8 @@ defmodule ProjectWeb.GameLive.Show do
   @topic_prefix "game:"
 
   @impl true
-  def mount(%{"id" => id} = params, _session, socket) do
+  def mount(%{"id" => id}, _session, socket) do
     if connected?(socket), do: PubSub.subscribe(Project.PubSub, topic(id))
-
-    isReveal = !is_nil(Map.get(params, "reveal"))
 
     case GameContext.get_game!(id) do
       nil ->
@@ -25,7 +23,8 @@ defmodule ProjectWeb.GameLive.Show do
          |> assign(
            game: game,
            name: "Guest_#{:rand.uniform(99999)}",
-           valid_sets: isReveal && GameContext.find_valid_sets(game.active_cards)
+           valid_sets: GameContext.find_valid_sets(game.active_cards),
+           show_sets: false
          )}
     end
   end
@@ -57,16 +56,16 @@ defmodule ProjectWeb.GameLive.Show do
       <% end %>
     </div>
 
-    <div class="grid grid-cols-2">
+    <div class="grid grid-cols-[3fr,1fr]">
       <%= if @game.players do %>
         <div class="players">
           <h2 class="text-xl font-bold">Scores</h2>
           <div>
             <%= for {player_id, player_cards} <- @game.players do %>
-              <div class="text-lg font-bold flex items-center">
+              <div class="text-lg font-bold grid grid-flow-col auto-cols-max items-center gap-2">
                 <.icon name="hero-user-circle" class="w-10 h-10 text-[var(--primary)]" />
                 <%= player_id %>: <%= div(length(player_cards), 3) %>
-                <div class="flex ml-4">
+                <div class="flex ml-2">
                   <%= for id <- Enum.take(player_cards, -3) do %>
                     <%= render_card(id) %>
                   <% end %>
@@ -79,11 +78,14 @@ defmodule ProjectWeb.GameLive.Show do
 
       <div class="font-bold justify-self-end">
         <%= length(@game.deck) %> <.icon name="hero-square-2-stack-solid" class="w-10 h-10" />
+        <button class={if @show_sets, do: "btn-primary", else: "btn-neutral"} phx-click="toggle_sets">
+          Help!
+        </button>
       </div>
     </div>
 
-    <%= if @valid_sets do %>
-      <div class="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-4 mt-36">
+    <%= if @show_sets do %>
+      <div class="grid grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-4 mt-12">
         <div
           :for={card <- @valid_sets}
           class="grid gap-1 border-2 rounded-lg p-2 justify-items-center"
@@ -114,7 +116,8 @@ defmodule ProjectWeb.GameLive.Show do
 
     {:noreply,
      assign(socket,
-       game: updated_game
+       game: updated_game,
+       valid_sets: GameContext.find_valid_sets(game.active_cards)
      )}
   end
 
@@ -140,12 +143,8 @@ defmodule ProjectWeb.GameLive.Show do
     end
   end
 
-  def handle_event("find_sets", _, socket) do
-    active_cards = socket.assigns.game.active_cards
-
-    valid_sets = GameContext.find_valid_sets(active_cards)
-
-    {:noreply, assign(socket, valid_sets: valid_sets)}
+  def handle_event("toggle_sets", _, socket) do
+    {:noreply, assign(socket, show_sets: !socket.assigns.show_sets)}
   end
 
   @impl true
@@ -171,7 +170,8 @@ defmodule ProjectWeb.GameLive.Show do
   def handle_info({:game_update, updated_game}, socket) do
     {:noreply,
      assign(socket,
-       game: updated_game
+       game: updated_game,
+       valid_sets: GameContext.find_valid_sets(updated_game.active_cards)
      )}
   end
 
