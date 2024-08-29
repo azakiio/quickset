@@ -52,7 +52,7 @@ defmodule Project.GameContext do
 
   """
   def create_game(attrs \\ %{}) do
-    deck = Enum.shuffle(Enum.to_list(0..80))
+    deck = Enum.to_list(0..80)
     initial_active_cards = Enum.take(deck, 12)
     remaining_deck = Enum.drop(deck, 12)
 
@@ -89,9 +89,23 @@ defmodule Project.GameContext do
     |> Repo.update()
   end
 
+  def find_valid_sets(active_cards) do
+    combinations_of_three(active_cards)
+    |> Enum.filter(&is_set?/1)
+  end
+
+  defp combinations_of_three(cards) do
+    for a <- cards,
+        b <- cards,
+        c <- cards,
+        a < b and b < c,
+        do:
+          [a, b, c]
+          |> Enum.reject(&(&1 == nil))
+  end
+
   def is_set?(card_ids) do
     categories = [:count, :shape, :fill, :color]
-
     set_arr = Enum.map(card_ids, &Card.generate_card_data/1)
 
     res =
@@ -101,8 +115,6 @@ defmodule Project.GameContext do
         |> Enum.uniq()
         |> length()
       end)
-
-    IO.inspect(res)
 
     Enum.all?(res, &(&1 in [1, 3]))
   end

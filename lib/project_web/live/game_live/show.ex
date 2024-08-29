@@ -20,7 +20,11 @@ defmodule ProjectWeb.GameLive.Show do
         {:ok,
          socket
          |> push_event("restore", %{key: "name", event: "restoreSettings"})
-         |> assign(game: game, name: "Guest_#{:rand.uniform(99999)}", any_sets: false)}
+         |> assign(
+           game: game,
+           name: "Guest_#{:rand.uniform(99999)}",
+           valid_sets: []
+         )}
     end
   end
 
@@ -50,30 +54,46 @@ defmodule ProjectWeb.GameLive.Show do
         </button>
       <% end %>
     </div>
-    <div class="grid grid-flow-col justify-end">
-      <div>
-        <%= if @any_sets do %>
-          <div class="font-bold text-green-500">
-            There is a set!
+
+    <div class="grid grid-cols-2">
+      <%= if @game.players do %>
+        <div class="players">
+          <h2 class="text-xl font-bold">Scores</h2>
+          <div>
+            <%= for {player_id, player_cards} <- @game.players do %>
+              <div class="text-lg font-bold flex items-center">
+                <.icon name="hero-user-circle" class="w-10 h-10 text-[var(--primary)]" />
+                <%= player_id %>: <%= div(length(player_cards), 3) %>
+                <div class="flex ml-4">
+                  <%= for id <- Enum.take(player_cards, -3) do %>
+                    <%= render_card(id) %>
+                  <% end %>
+                </div>
+              </div>
+            <% end %>
           </div>
-        <% end %>
-      </div>
-      <button class="btn" phx-click="any_set">Any Sets?</button>
-      <div class="font-bold">
+        </div>
+      <% end %>
+
+      <div class="font-bold justify-self-end">
         <%= length(@game.deck) %> <.icon name="hero-square-2-stack-solid" class="w-10 h-10" />
       </div>
     </div>
 
-    <%= if @game.players do %>
-      <div class="players">
-        <h2 class="text-xl font-bold">Players and Scores</h2>
-        <ul>
-          <%= for {player_id, player_cards} <- @game.players do %>
-            <li>
-              <%= player_id %>: <%= div(length(player_cards), 3) %>
-            </li>
+    <button phx-click="find_sets" class="btn mt-36 mb-4">Reveal Sets</button>
+
+    <%= if @valid_sets do %>
+      <div class="grid grid-cols-[repeat(auto-fit,minmax(150px,1fr))] gap-4">
+        <div
+          :for={card <- @valid_sets}
+          class="grid gap-1 border-2 rounded-lg p-2 justify-items-center"
+        >
+          <%= for id <- card do %>
+            <div class="flex place-items-center content-center">
+              <%= render_card(id) %>
+            </div>
           <% end %>
-        </ul>
+        </div>
       </div>
     <% end %>
     """
@@ -120,14 +140,15 @@ defmodule ProjectWeb.GameLive.Show do
     end
   end
 
-  def handle_event("any_set", _, socket) do
+  def handle_event("find_sets", _, socket) do
     active_cards = socket.assigns.game.active_cards
 
-    any_sets = GameContext.is_set?(active_cards)
+    valid_sets = GameContext.find_valid_sets(active_cards)
 
-    {:noreply, assign(socket, :any_sets, any_sets)}
+    {:noreply, assign(socket, valid_sets: valid_sets)}
   end
 
+  @impl true
   def handle_info({:finalize_selection, selected_cards}, socket) do
     game = socket.assigns.game
     result = GameContext.update_game_with_set(game, selected_cards, socket.assigns.name)
