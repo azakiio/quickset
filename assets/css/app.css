@@ -22,7 +22,7 @@
 
 .card {
   display: flex;
-  flex-wrap: wrap;
+  flex-wrap: wrap-reverse;
   gap: 0.5rem;
   justify-content: center;
   align-items: center;
@@ -30,7 +30,7 @@
   padding: 12px;
   border-radius: 1rem;
   transition: scale 0.3s;
-  @apply border-2;
+  @apply border shadow;
 
   &[aria-selected] {
     scale: 1.05;

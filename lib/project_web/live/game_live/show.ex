@@ -17,6 +17,8 @@ defmodule ProjectWeb.GameLive.Show do
          |> push_navigate(to: "/")}
 
       game ->
+        IO.inspect(GameContext.find_valid_sets(game.active_cards), charlists: :as_lists)
+
         {:ok,
          socket
          |> push_event("restore", %{key: "name", event: "restoreSettings"})
@@ -24,7 +26,8 @@ defmodule ProjectWeb.GameLive.Show do
            game: game,
            name: "Guest_#{:rand.uniform(99999)}",
            valid_sets: GameContext.find_valid_sets(game.active_cards),
-           show_sets: false
+           show_sets: false,
+           selected_cards: []
          )}
     end
   end
@@ -47,11 +50,11 @@ defmodule ProjectWeb.GameLive.Show do
         <button
           class="card"
           disabled={!card}
-          aria-selected={card in @game.selected_cards}
+          aria-selected={card in @selected_cards}
           phx-click="select_card"
           phx-value-card={card}
         >
-          <%= render_card(card) %>
+          <%= Card.render_card(card) %>
         </button>
       <% end %>
     </div>
@@ -67,7 +70,7 @@ defmodule ProjectWeb.GameLive.Show do
                 <%= player_id %>: <%= div(length(player_cards), 3) %>
                 <div class="flex ml-2">
                   <%= for id <- Enum.take(player_cards, -3) do %>
-                    <%= render_card(id) %>
+                    <%= Card.render_card(id) %>
                   <% end %>
                 </div>
               </div>
@@ -91,8 +94,8 @@ defmodule ProjectWeb.GameLive.Show do
           class="grid gap-1 border-2 rounded-lg p-2 justify-items-center"
         >
           <%= for id <- card do %>
-            <div class="flex place-items-center content-center">
-              <%= render_card(id) %>
+            <div class="card">
+              <%= Card.render_card(id) %>
             </div>
           <% end %>
         </div>
@@ -103,8 +106,6 @@ defmodule ProjectWeb.GameLive.Show do
 
   @impl true
   def handle_event("restoreSettings", token_data, socket) do
-    IO.puts("token_data: #{token_data}")
-
     {:noreply, assign(socket, :name, token_data)}
   end
 
@@ -117,13 +118,14 @@ defmodule ProjectWeb.GameLive.Show do
     {:noreply,
      assign(socket,
        game: updated_game,
-       valid_sets: GameContext.find_valid_sets(game.active_cards)
+       valid_sets: GameContext.find_valid_sets(game.active_cards),
+       selected_cards: []
      )}
   end
 
   def handle_event("select_card", %{"card" => card}, socket) do
     card = String.to_integer(card)
-    selected_cards = socket.assigns.game.selected_cards
+    selected_cards = socket.assigns.selected_cards
 
     selected_cards =
       if card in selected_cards do
@@ -134,12 +136,9 @@ defmodule ProjectWeb.GameLive.Show do
 
     if length(selected_cards) == 3 do
       Process.send_after(self(), {:finalize_selection, selected_cards}, 1000)
-
-      {:noreply,
-       update(socket, :game, fn state -> Map.put(state, :selected_cards, selected_cards) end)}
+      {:noreply, assign(socket, :selected_cards, selected_cards)}
     else
-      {:noreply,
-       update(socket, :game, fn state -> Map.put(state, :selected_cards, selected_cards) end)}
+      {:noreply, assign(socket, :selected_cards, selected_cards)}
     end
   end
 
@@ -156,14 +155,16 @@ defmodule ProjectWeb.GameLive.Show do
       {:ok, updated_game} ->
         broadcast_update(socket, updated_game)
 
-        {:noreply,
-         assign(socket,
-           game: updated_game
-         )}
+        if length(updated_game.selected_cards) == 0 do
+          {:noreply,
+           assign(socket,
+             game: updated_game,
+             selected_cards: []
+           )}
+        end
 
       {:error, _reason} ->
-        {:noreply,
-         update(socket, :game, fn state -> Map.put(state, :selected_cards, selected_cards) end)}
+        {:noreply, socket}
     end
   end
 
@@ -184,46 +185,4 @@ defmodule ProjectWeb.GameLive.Show do
   end
 
   defp topic(game_id), do: @topic_prefix <> to_string(game_id)
-
-  defp render_card(card_index) do
-    if is_number(card_index) do
-      %{count: count, shape: shape, fill: fill, color: color} =
-        Card.generate_card_data(card_index)
-
-      card_svg =
-        for _ <- 1..count do
-          case shape do
-            "square" ->
-              """
-              <svg width="50" height="50" class="card-svg">
-                <rect x="5" y="5" width="40" height="40" fill="#{fill_color(fill, color)}" stroke="#{color}" stroke-width="2" rx="4" ry="4" stroke-linejoin="round" />
-              </svg>
-              """
-
-            "circle" ->
-              """
-              <svg width="50" height="50" class="card-svg">
-                <circle cx="25" cy="25" r="20" fill="#{fill_color(fill, color)}" stroke="#{color}" stroke-width="2"/>
-              </svg>
-              """
-
-            "diamond" ->
-              """
-              <svg width="50" height="50" class="card-svg">
-                <polygon points="25,2 48,25 25,48 2,25" fill="#{fill_color(fill, color)}" stroke="#{color}" stroke-width="2" stroke-linejoin="round"/>
-              </svg>
-              """
-          end
-        end
-        |> Enum.join("\n")
-
-      Phoenix.HTML.raw(card_svg)
-    else
-      Phoenix.HTML.raw("")
-    end
-  end
-
-  defp fill_color("solid", color), do: color
-  defp fill_color("striped", color), do: "hsl(from #{color} h s l / 0.4)"
-  defp fill_color("empty", _color), do: "transparent"
 end

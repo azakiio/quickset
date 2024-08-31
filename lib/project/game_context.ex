@@ -79,7 +79,7 @@ defmodule Project.GameContext do
 
     attrs_with_reset = %{
       deck: remaining_deck,
-      active_cards: initial_active_cards,
+      active_cards: [13, 31, 73, 7, 36, 63, 74, 9, 44, 19, 54, 15],
       selected_cards: [],
       players: %{}
     }
@@ -99,9 +99,7 @@ defmodule Project.GameContext do
         b <- cards,
         c <- cards,
         a < b and b < c,
-        do:
-          [a, b, c]
-          |> Enum.reject(&(&1 == nil))
+        do: [a, b, c]
   end
 
   def is_set?(card_ids) do
@@ -155,7 +153,7 @@ defmodule Project.GameContext do
       })
     else
       # Ensure selected_cards is reset even if the set is not valid
-      update_game(game, %{selected_cards: []})
+      {:ok, game}
     end
   end
 
