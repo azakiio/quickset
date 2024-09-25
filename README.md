@@ -4,7 +4,9 @@
 
 🎮 **Live Demo**: [Play Now!](https://quickset.online)
 
-![Game Screenshot](url-of-game-screenshot)
+<a href="https://quickset.online">
+    <img width="300" alt="Screenshot 2024-09-25 at 16 04 28" src="https://github.com/user-attachments/assets/411c44bd-0718-4361-8b5d-e6c665cc4a8e">
+</a>
 
 ## ✨ Features
 
